@@ -1,0 +1,88 @@
+{
+  "name": "Colloky Brand",
+  "dataColors": [
+    "#15254B",
+    "#F2766B",
+    "#4FA3E0",
+    "#F5B82E",
+    "#3DBE9C",
+    "#EC8FB4",
+    "#8C7AE6",
+    "#2E7D8C"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#15254B",
+  "tableAccent": "#15254B",
+  "good": "#2FA36B",
+  "neutral": "#F5B82E",
+  "bad": "#E0524A",
+  "maximum": "#15254B",
+  "center": "#6F86B8",
+  "minimum": "#E3E9F5",
+  "textClasses": {
+    "title": { "fontFace": "Segoe UI Semibold", "fontSize": 13, "color": "#15254B" },
+    "header": { "fontFace": "Segoe UI Semibold", "fontSize": 12, "color": "#15254B" },
+    "label": { "fontFace": "Segoe UI", "fontSize": 10, "color": "#5A6478" },
+    "callout": { "fontFace": "Segoe UI Semibold", "fontSize": 28, "color": "#15254B" }
+  },
+  "visualStyles": {
+    "page": {
+      "*": {
+        "background": [{ "color": { "solid": { "color": "#F4F6FA" } }, "transparency": 0 }],
+        "outspace": [{ "color": { "solid": { "color": "#F4F6FA" } } }]
+      }
+    },
+    "*": {
+      "*": {
+        "background": [{ "show": true, "color": { "solid": { "color": "#FFFFFF" } }, "transparency": 0 }],
+        "border": [{ "show": true, "color": { "solid": { "color": "#E3E7EF" } }, "radius": 12 }],
+        "dropShadow": [{ "show": true, "preset": "bottomRight", "transparency": 88 }],
+        "title": [{ "show": true, "fontColor": { "solid": { "color": "#15254B" } }, "fontSize": 13 }],
+        "valueAxis": [{ "gridlineColor": { "solid": { "color": "#E3E7EF" } }, "labelColor": { "solid": { "color": "#8A93A6" } } }],
+        "categoryAxis": [{ "labelColor": { "solid": { "color": "#5A6478" } } }],
+        "legend": [{ "labelColor": { "solid": { "color": "#5A6478" } } }]
+      }
+    },
+    "shape": {
+      "*": {
+        "background": [{ "show": false }],
+        "border": [{ "show": false }],
+        "dropShadow": [{ "show": false }]
+      }
+    },
+    "basicShape": {
+      "*": {
+        "background": [{ "show": false }],
+        "border": [{ "show": false }],
+        "dropShadow": [{ "show": false }]
+      }
+    },
+    "image": {
+      "*": {
+        "background": [{ "show": false }],
+        "border": [{ "show": false }],
+        "dropShadow": [{ "show": false }]
+      }
+    },
+    "textbox": {
+      "*": {
+        "background": [{ "show": false }],
+        "border": [{ "show": false }],
+        "dropShadow": [{ "show": false }]
+      }
+    },
+    "actionButton": {
+      "*": {
+        "border": [{ "show": false }],
+        "dropShadow": [{ "show": false }]
+      }
+    },
+    "pageNavigator": {
+      "*": {
+        "background": [{ "show": false }],
+        "border": [{ "show": false }],
+        "dropShadow": [{ "show": false }]
+      }
+    }
+  }
+}
