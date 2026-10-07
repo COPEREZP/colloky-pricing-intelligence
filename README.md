@@ -165,4 +165,4 @@ Main settings are at the top of the script: categories, headless mode, sleep pre
 *Personal portfolio project. It only collects publicly available catalog information at a low request rate and is not affiliated with Colloky.*
 
 ---
-**Author:** [Constanza Andrea Perez Pulido] · Data Analyst · [LinkedIn](https://www.linkedin.com/in/constanzaperezpulido/)] · Open to remote roles (US/Canada)
+**Author:** [Constanza Andrea Perez Pulido] · Data Analyst · [[LinkedIn](https://www.linkedin.com/in/constanzaperezpulido/)] · Open to remote roles (US/Canada)
