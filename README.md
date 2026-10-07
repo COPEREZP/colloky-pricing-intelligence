@@ -1,7 +1,10 @@
 # Colloky Pricing Intelligence
 
-**Weekly competitive-intelligence pipeline for a Chilean kids' fashion e-commerce store.**
-It scrapes the full public catalog of [colloky.cl](https://www.colloky.cl), enriches every product with an automatic classification, and stores time-stamped snapshots in PostgreSQL so prices, markdowns, stock and assortment can be tracked week over week.
+**Automated competitive-intelligence pipeline for a Chilean kids' fashion e-commerce store.** 
+It scrapes the full public catalog of [colloky.cl](...), enriches every product with an automatic classification, and stores time-stamped snapshots in PostgreSQL so prices, markdowns, stock and assortment can be tracked week over week.
+**Includes a 4-page Power BI dashboard** built for commercial and marketing teams, with data captured hourly during Chile's Cyber Day (October 2026).
+
+![Dashboard overview](images/overview.png)
 
 `Python` · `Selenium` · `BeautifulSoup` · `PostgreSQL` · `SQLAlchemy` · `Regex / NLP-style text classification` · `Data quality profiling`
 
@@ -14,6 +17,21 @@ It scrapes the full public catalog of [colloky.cl](https://www.colloky.cl), enri
 - How is the assortment split by product type, gender, age segment, material and licensed characters (Disney, Marvel)?
 - Which products does the store promote? (position on the page and rank within the category)
 - How does a single product evolve over time: price, discount, stock and visibility?
+
+## Key insights
+
+> Based on snapshots captured during Cyber Day, October 2026. Prices in Chilean pesos (CLP).
+
+1. **The whole catalog is on sale.** ~94% of products were discounted; 62% sat in the 41–60% band.
+2. **Winter is being cleared.** Beanies, parkas and boots carried the deepest markdowns (54–60% off), often with half their sizes already sold out: end-of-season clearance of broken size runs.
+3. **Older stock is discounted hardest.** Using SKU number as a proxy for product age, the oldest items had the deepest discounts, while baby products held their price best.
+4. **Prices were stable during Cyber Day.** Footwear held at ~48% off throughout the event; clothing and accessories eased slightly (~45% → ~44%).
+5. **Shoppers bought summer.** Discounts targeted winter, but the fastest sell-through came from warm-weather items (shorts, sandals, light tops) and a Halloween costume.
+6. **Licensed characters are a small, premium niche.** ~3% of the catalog, priced above own brand (Mickey, Toy Story, Cars at ~CLP 14K vs ~CLP 11.6K) and discounted ~10 pts less in clothing and accessories.
+7. **Value positioning.** 9 in 10 products sell for under CLP 20K; footwear effectively sells at half its list price.
+8. **Assortment skews female.** Girls' products outnumber boys' ~1.5 to 1 in every age group.
+
+**Caveats.** The licensed premium includes a product-mix effect (licensed items cluster in certain product types). Groups with fewer than 30 SKUs are excluded from rankings to avoid small-sample bias.
 
 ## How it works
 
@@ -49,6 +67,28 @@ Product names are free text written by the brand, with typos and inconsistent fo
 | **Color** | Plurals, shades ("azul marino", "rosa viejo"), multicolor/bicolor detection |
 
 A built-in test table runs before every scrape to check the classifier on known edge cases.
+
+## Dashboard (Power BI)
+
+| Page | Focus |
+|---|---|
+| **Overview** | KPIs, assortment split, discount depth, trend, audience (age × gender) |
+| **Pricing & Discounts** | Discount vs. stock-out scatter, heatmap by product and age, list vs. selling price, price tiers, Cyber Day trend |
+| **Licensing & Marketing** | Licensed price premium, character mix, licensed vs. own-brand discounting, top colors |
+| **Top Products** | Fastest selling-out products and biggest shopper savings, with product photos |
+
+| | |
+|---|---|
+| ![Pricing](images/pricing.png) | ![Licensing](images/licensing.png) |
+| ![Top products](images/top_products.png) | |
+
+### Modeling highlights
+
+- **Snapshot-aware DAX.** Every measure evaluates the latest snapshot in the current filter context, so KPIs never double-count products across runs and time-series visuals use each run's own data.
+- **Sell-through proxy.** `Stockout Increase` compares each product's stock-out rate against its first snapshot, which approximates sales velocity without access to sales data.
+- **Minimum-sample measures.** Ranking measures return blank for groups under 30 SKUs, so Top-N lists aren't distorted by tiny groups.
+- **Power Query.** Discount buckets, price tiers, custom sort keys and one image per product (de-duplicated by product URL).
+- **Brand theme.** Custom JSON theme based on the brand's navy, with consistent character colors across visuals.
 
 ## Data model
 
@@ -123,3 +163,6 @@ Main settings are at the top of the script: categories, headless mode, sleep pre
 ---
 
 *Personal portfolio project. It only collects publicly available catalog information at a low request rate and is not affiliated with Colloky.*
+
+---
+**Author:** [Constanza Andrea Perez Pulido] · Data Analyst · [LinkedIn](https://www.linkedin.com/in/constanzaperezpulido/)) · Open to remote roles (US/Canada)
