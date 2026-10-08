@@ -126,7 +126,7 @@ The **average discount barely moved (45.7% → 50.0%)**, a reminder of how a hea
 
 ### Orchestration
 
-![Databricks job](images/databricks_job.png)
+![Databricks job](databricks_job.png)
 
 The three notebooks run as a Databricks Job (`bronze → silver → gold`), each task depending on the previous one.
 *Last run: 2m 22s · 29 queries · 1.08M rows read · 113K rows written.*
