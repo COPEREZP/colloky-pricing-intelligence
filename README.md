@@ -6,7 +6,7 @@ It scrapes the full public catalog of [colloky.cl](...), enriches every product 
 
 ![Dashboard overview](images/overview.png)
 
-`Python` · `Selenium` · `BeautifulSoup` · `PostgreSQL` · `SQLAlchemy` · `Regex / NLP-style text classification` · `Data quality profiling`
+`Python` · `Selenium` · `BeautifulSoup` · `PostgreSQL` · `SQLAlchemy` · `Regex / NLP-style text classification` · `Data quality profiling` · `Power BI` · `DAX` · `Power Query (M)` · `Databricks` · `Delta Lake` · `PySpark`
 
 ---
 
@@ -25,7 +25,7 @@ It scrapes the full public catalog of [colloky.cl](...), enriches every product 
 1. **The whole catalog is on sale.** ~94% of products were discounted; 62% sat in the 41–60% band.
 2. **Winter is being cleared.** Beanies, parkas and boots carried the deepest markdowns (54–60% off), often with half their sizes already sold out: end-of-season clearance of broken size runs.
 3. **Older stock is discounted hardest.** Using SKU number as a proxy for product age, the oldest items had the deepest discounts, while baby products held their price best.
-4. **Prices were stable during Cyber Day.** Footwear held at ~48% off throughout the event; clothing and accessories eased slightly (~45% → ~44%).
+4. **Cyber Day closed with a flat 50%-off storewide event.** Discounts were stable for most of the event (footwear ~48%, clothing and accessories ~44–45%), until ~10 PM on Oct 7, when 99.6% of the catalog switched to exactly 50% off.
 5. **Shoppers bought summer.** Discounts targeted winter, but the fastest sell-through came from warm-weather items (shorts, sandals, light tops) and a Halloween costume.
 6. **Licensed characters are a small, premium niche.** ~3% of the catalog, priced above own brand (Mickey, Toy Story, Cars at ~CLP 14K vs ~CLP 11.6K) and discounted ~10 pts less in clothing and accessories.
 7. **Value positioning.** 9 in 10 products sell for under CLP 20K; footwear effectively sells at half its list price.
@@ -90,6 +90,47 @@ A built-in test table runs before every scrape to check the classifier on known 
 - **Power Query.** Discount buckets, price tiers, custom sort keys and one image per product (de-duplicated by product URL).
 - **Brand theme.** Custom JSON theme based on the brand's navy, with consistent character colors across visuals.
 
+## Databricks lakehouse (medallion architecture)
+
+The snapshot history was migrated to a **Databricks lakehouse** built on Delta Lake, with PySpark and SQL notebooks orchestrated as a Databricks Job.
+
+```mermaid
+flowchart LR
+    A[CSV export<br/>Unity Catalog volume] --> B[Bronze<br/>raw Delta table]
+    B --> C[Silver<br/>typed, deduplicated,<br/>quality-flagged]
+    C --> D[Gold<br/>business tables]
+    D --> E[AI/BI dashboard]
+```
+
+| Layer | What it does |
+|---|---|
+| **Bronze** | Ingests the raw CSV as-is into Delta, with audit columns (source file, ingestion time) |
+| **Silver** | Casts types, trims text, deduplicates one row per product per run, flags data-quality issues, and detects **incomplete runs** with a data-driven rule (≥90% of the median run size) |
+| **Gold** | Product lifecycle, price-change events (window functions), category KPIs per run, catalog churn, and discount mix per run |
+
+**Data quality:** 53,469 rows across 16 hourly snapshots validated in Silver, with **zero** quality violations.
+
+### The 50%-off switch
+
+Hourly snapshots revealed a storewide repricing event that a daily snapshot would have missed. Between 9 and 10 PM on Oct 7, **the share of products at exactly 50% off jumped from 20% to 99.6%**, while items at 60% off dropped from 42% to zero. About 2,600 products were repriced in a single run: items at 60% off went *up* and full-price items went *down*.
+
+The **average discount barely moved (45.7% → 50.0%)**, a reminder of how a headline average can hide a major pricing event.
+
+**How it was found.** Price-change detection with `LAG()` flagged ~2,900 changes. Before reporting them, I tested and ruled out two alternative explanations: sizes selling out (most changes happened with the same sizes in stock) and a scraper malfunction (the new prices were exactly 50% of list, and list prices never changed). A per-run discount-mix table then confirmed the storewide switch.
+
+**Other Gold findings**
+- **Inflated reference prices:** only 5 products had their list price raised while the selling price stayed flat, so there was minimal evidence of fake discounts.
+- **Catalog churn:** 262 products left the catalog overnight (9-hour gap between runs).
+
+📄 **[View the full Databricks dashboard (PDF)](databricks/databricks_dashboard.pdf)**
+
+### Orchestration
+
+![Databricks job](images/databricks_job.png)
+
+The three notebooks run as a Databricks Job (`bronze → silver → gold`), each task depending on the previous one.
+*Last run: 2m 22s · 29 queries · 1.08M rows read · 113K rows written.*
+
 ## Data model
 
 One row per product per snapshot (`colloky_prueba_f`):
@@ -134,6 +175,11 @@ First full run: **3,387 products** across 3 categories and 114 pages, with no fa
 | `colloky_data_quality.sql` | Data-quality and analysis queries (profiling, consistency, product zoom, price history) |
 | `run_scraper.bat` / `run_scraper.sh` | Background launchers for Windows / macOS-Linux |
 | `.env.example` | PostgreSQL environment variables |
+| `powerbi/colloky_pricing_dashboard.pbix` | Power BI dashboard (4 pages) |
+| `powerbi/colloky_brand_theme.json` | Custom report theme |
+| `databricks/notebooks/` | Bronze, Silver and Gold notebooks (PySpark + SQL) |
+| `databricks/databricks_dashboard.pdf` | Databricks AI/BI dashboard export |
+| `images/` | Dashboard and job screenshots |
 
 ## How to run
 
@@ -156,10 +202,12 @@ Main settings are at the top of the script: categories, headless mode, sleep pre
 
 ## Roadmap
 
-- Schedule the weekly run automatically
-- Dashboard on top of the snapshots (price index, markdown calendar, sell-through proxy)
-- Week-over-week sell-through estimate from changes in available sizes
-
+- [x] Schedule runs automatically (hourly during sales events)
+- [x] Dashboard on top of the snapshots (Power BI + Databricks)
+- [x] Sell-through estimate from changes in available sizes
+- [x] Medallion lakehouse in Databricks with an orchestrated Job
+- [ ] Automate the CSV export to Databricks (file-arrival trigger)
+- [ ] Add a competitor retailer to benchmark price positioning
 ---
 
 *Personal portfolio project. It only collects publicly available catalog information at a low request rate and is not affiliated with Colloky.*
