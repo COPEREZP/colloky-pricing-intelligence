@@ -79,8 +79,8 @@ A built-in test table runs before every scrape to check the classifier on known 
 
 | | |
 |---|---|
-| ![Pricing](images/pricing.png) | ![Licensing](images/licensing.png) |
-| ![Top products](images/top_products.png) | |
+| ![Overview](overview.png) | ![Pricing](pricing.png) | ![Licensing](licensing.png) |
+| ![Top products](top_products.png) | |
 
 ### Modeling highlights
 
