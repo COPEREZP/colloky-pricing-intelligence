@@ -4,7 +4,7 @@
 It scrapes the full public catalog of [colloky.cl](...), enriches every product with an automatic classification, and stores time-stamped snapshots in PostgreSQL so prices, markdowns, stock and assortment can be tracked week over week.
 **Includes a 4-page Power BI dashboard** built for commercial and marketing teams, with data captured hourly during Chile's Cyber Day (October 2026).
 
-![Dashboard overview](images/overview.png)
+![Dashboard overview](overview.png)
 
 `Python` · `Selenium` · `BeautifulSoup` · `PostgreSQL` · `SQLAlchemy` · `Regex / NLP-style text classification` · `Data quality profiling` · `Power BI` · `DAX` · `Power Query (M)` · `Databricks` · `Delta Lake` · `PySpark`
 
