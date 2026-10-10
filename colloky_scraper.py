@@ -11,7 +11,7 @@ be tracked over time. Historical rows are never updated or deleted.
 What's new compared with v2
 ---------------------------
  1. New table name: `colloky_prueba_f` (the v2 table is not touched).
-    The optional DDL file is now `colloky_schema.sql`.
+    The optional DDL file is now `colloky_prueba_f.sql`.
  2. Columns `sizes_available` and `sizes_out_of_stock` removed
     (they were 100% NULL: VTEX does not expose size labels in the listing).
  3. Product description: for every product the scraper calls VTEX's public
@@ -111,7 +111,7 @@ TIMEOUT_DESCRIPCION_MS = 15000
 
 # File with the CREATE TABLE / ADD COLUMN statements.
 # If the file is not found, the same DDL embedded below is used.
-ARCHIVO_SQL = "colloky_schema.sql"
+ARCHIVO_SQL = "colloky_prueba_f.sql"
 
 
 # =========================================================
@@ -181,7 +181,7 @@ def crear_engine():
 # =========================================================
 # TABLE DEFINITION
 # =========================================================
-# Same content as colloky_schema.sql.
+# Same content as colloky_prueba_f.sql.
 # Every statement is idempotent, so it is safe to run on every execution.
 
 DDL_TABLA = f"""
