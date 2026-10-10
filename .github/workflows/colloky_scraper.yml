@@ -1,0 +1,68 @@
+name: Colloky scraper
+
+on:
+  schedule:
+    # UTC time. = 09:17, 14:17, 20:17 in Chile (summer time).
+    - cron: "17 12,17,23 * * *"
+  workflow_dispatch:
+    inputs:
+      reanudar_snapshot:
+        description: 'Resume an interrupted snapshot, e.g. "2026-10-10 09:17:00". Leave empty for a new one.'
+        required: false
+        default: ""
+
+concurrency:
+  group: colloky-scraper
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      COLLOKY_REANUDAR_SNAPSHOT: ${{ github.event.inputs.reanudar_snapshot }}
+      TZ: America/Santiago
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Splits DATABASE_URL into the POSTGRES_* variables the scraper already reads.
+      - name: Read database connection
+        run: |
+          python - <<'EOF'
+          import os
+          from urllib.parse import urlparse, unquote
+          u = urlparse(os.environ["DATABASE_URL"].strip())
+          password = unquote(u.password or "")
+          print(f"::add-mask::{password}")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"POSTGRES_HOST={u.hostname}\n")
+              f.write(f"POSTGRES_PORT={u.port or 5432}\n")
+              f.write(f"POSTGRES_USER={unquote(u.username or '')}\n")
+              f.write(f"POSTGRES_PASSWORD={password}\n")
+              f.write(f"POSTGRES_DATABASE={u.path.lstrip('/')}\n")
+          EOF
+
+      - name: Run the scraper
+        run: python colloky_scraper.py
+
+      - name: Save the log file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: colloky-log-${{ github.run_id }}
+          path: logs/
+          retention-days: 14
+          if-no-files-found: ignore
