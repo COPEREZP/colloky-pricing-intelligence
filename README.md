@@ -1,19 +1,24 @@
 # Colloky Pricing Intelligence
 
-**Automated competitive-intelligence pipeline for a Chilean kids' fashion e-commerce store.** 
-It scrapes the full public catalog of [colloky.cl](...), enriches every product with an automatic classification, and stores time-stamped snapshots in PostgreSQL so prices, markdowns, stock and assortment can be tracked week over week.
+[![Colloky scraper](https://github.com/COPEREZP/colloky-pricing-intelligence/actions/workflows/colloky_scraper.yml/badge.svg)](https://github.com/COPEREZP/colloky-pricing-intelligence/actions/workflows/colloky_scraper.yml)
+
+**Automated competitive-intelligence pipeline for a Chilean kids' fashion e-commerce store.**
+It scrapes the full public catalog of [colloky.cl](https://www.colloky.cl), enriches every product with an automatic classification, and stores time-stamped snapshots in PostgreSQL so prices, markdowns, stock and assortment can be tracked over time.
+
+**Fully automated in the cloud:** a scheduled GitHub Actions workflow runs the scraper **3 times a day** and loads each snapshot into a serverless PostgreSQL database (Neon). No manual runs, no local machine needed.
+
 **Includes a 4-page Power BI dashboard** built for commercial and marketing teams, with data captured hourly during Chile's Cyber Day (October 2026).
 
 ![Dashboard overview](overview.png)
 
-`Python` · `Selenium` · `BeautifulSoup` · `PostgreSQL` · `SQLAlchemy` · `Regex / NLP-style text classification` · `Data quality profiling` · `Power BI` · `DAX` · `Power Query (M)` · `Databricks` · `Delta Lake` · `PySpark`
+`Python` · `Selenium` · `BeautifulSoup` · `PostgreSQL` · `SQLAlchemy` · `GitHub Actions` · `Neon (serverless Postgres)` · `Regex / NLP-style text classification` · `Data quality profiling` · `Power BI` · `DAX` · `Power Query (M)` · `Databricks` · `Delta Lake` · `PySpark`
 
 ---
 
 ## Business questions it answers
 
 - How deep and how frequent are the markdowns? Which discount tiers does the brand use (20%, 30%, 40%, 50%, 60%...)?
-- Which products are selling out? (share of sizes out of stock per product, and how it changes between weeks)
+- Which products are selling out? (share of sizes out of stock per product, and how it changes over time)
 - How is the assortment split by product type, gender, age segment, material and licensed characters (Disney, Marvel)?
 - Which products does the store promote? (position on the page and rank within the category)
 - How does a single product evolve over time: price, discount, stock and visibility?
@@ -37,19 +42,35 @@ It scrapes the full public catalog of [colloky.cl](...), enriches every product 
 
 ```mermaid
 flowchart LR
+    S[GitHub Actions<br/>scheduled 3x per day] --> A
     A[Category pages<br/>Accessories · Clothing · Footwear] -->|Selenium, headless Chrome| B[Product cards<br/>+ JSON-LD structured data]
     B --> C[VTEX catalog API<br/>description, composition,<br/>specifications · 1 batch per page]
     B --> D[Classification engine]
     C --> D
-    D --> E[(PostgreSQL<br/>weekly snapshots)]
+    D --> E[(PostgreSQL on Neon<br/>time-stamped snapshots)]
     E --> F[SQL data-quality<br/>and analysis queries]
+    E --> G[Power BI · Databricks]
 ```
 
-1. **Crawl.** Walks every page of the three store categories with Selenium (headless Chrome) and stops by itself at the end of the catalog.
-2. **Extract.** Combines what the product card shows (selling price, list price, image) with the page's JSON-LD (SKU, per-size offers and availability).
-3. **Enrich.** For each page, one batched call to the store's public VTEX catalog API brings the product description, the *Composition* specification and the description sections (*Care tips*, *When to wear it*, *Pairs well with*).
-4. **Classify.** A rule-based text engine turns free-text product names into structured attributes (see below).
-5. **Load.** Upserts into PostgreSQL keyed on `(product_url, date_scraped)`: every run is a new snapshot and history is never overwritten.
+1. **Schedule.** A GitHub Actions workflow starts the scraper on a cloud runner 3 times a day. It can also be triggered manually, including to resume an interrupted snapshot.
+2. **Crawl.** Walks every page of the three store categories with Selenium (headless Chrome) and stops by itself at the end of the catalog.
+3. **Extract.** Combines what the product card shows (selling price, list price, image) with the page's JSON-LD (SKU, per-size offers and availability).
+4. **Enrich.** For each page, one batched call to the store's public VTEX catalog API brings the product description, the *Composition* specification and the description sections (*Care tips*, *When to wear it*, *Pairs well with*).
+5. **Classify.** A rule-based text engine turns free-text product names into structured attributes (see below).
+6. **Load.** Upserts into PostgreSQL keyed on `(product_url, date_scraped)`: every run is a new snapshot and history is never overwritten.
+
+## Cloud automation
+
+| Piece | Choice | Why |
+|---|---|---|
+| Scheduler and runner | GitHub Actions (`.github/workflows/colloky_scraper.yml`) | Cron schedule, free cloud runners with Chrome preinstalled, run history and logs in one place |
+| Database | Neon (serverless PostgreSQL) | Same Postgres as local development; compute scales to zero between runs |
+| Credentials | GitHub encrypted secret (`DATABASE_URL`) | No passwords in the code or in the repository history |
+| Schedule | 09:17, 14:17 and 20:17 Chile time | Captures intraday price and stock changes while keeping load on the store low |
+| Safety | Concurrency group, 150-minute timeout, failure e-mail | Runs never overlap, a stuck run is stopped, and a failed run is reported |
+| Observability | Log file uploaded as a run artifact (14 days) | Any run can be audited after the fact |
+
+The status badge at the top of this page shows whether the latest scheduled run succeeded.
 
 ## Classification engine
 
@@ -79,8 +100,8 @@ A built-in test table runs before every scrape to check the classifier on known 
 
 | | |
 |---|---|
-| ![Overview](overview.png) | ![Pricing](pricing.png) | ![Licensing](licensing.png) |
-| ![Top products](top_products.png) | |
+| ![Overview](overview.png) | ![Pricing](pricing.png) |
+| ![Licensing](licensing.png) | ![Top products](top_products.png) |
 
 ### Modeling highlights
 
@@ -158,11 +179,14 @@ Profiling the first runs drove concrete design decisions:
 
 First full run: **3,387 products** across 3 categories and 114 pages, with no failed pages.
 
+Every run also prints its own data-quality summary (rows per product type, description and material coverage, unclassified names), which is kept in the run's log.
+
 ## Reliability features
 
+- **Scheduled cloud runs.** GitHub Actions runs the pipeline 3 times a day; runs never overlap and a failed run triggers an e-mail.
 - **Retries.** Every page gets 3 attempts and Chrome is restarted between attempts.
-- **Unattended runs.** Headless Chrome; the computer is kept awake during the run (Windows, macOS, Linux); everything is logged to `logs/`.
-- **Resumable snapshots.** An interrupted run continues where it stopped, without duplicating rows.
+- **Unattended runs.** Headless Chrome; when run locally, the computer is kept awake during the run (Windows, macOS, Linux); everything is logged to `logs/`.
+- **Resumable snapshots.** An interrupted run continues where it stopped, without duplicating rows (locally with a setting, in the cloud with the workflow's *Run workflow* input).
 - **Duplicate SKUs.** If the catalog reorders mid-run and a SKU appears twice, the occurrence with **less stock** is kept, since it is the most recent and most conservative reading.
 - **Polite crawling.** Delays between pages, one batched API call per page, public data only.
 
@@ -171,6 +195,8 @@ First full run: **3,387 products** across 3 categories and 114 pages, with no fa
 | File | Purpose |
 |---|---|
 | `colloky_scraper.py` | The scraper (crawl, enrich, classify, load) |
+| `.github/workflows/colloky_scraper.yml` | Cloud schedule (3x per day) on GitHub Actions |
+| `requirements.txt` | Python dependencies |
 | `colloky_schema.sql` | Table definition; read automatically by the scraper |
 | `colloky_data_quality.sql` | Data-quality and analysis queries (profiling, consistency, product zoom, price history) |
 | `run_scraper.bat` / `run_scraper.sh` | Background launchers for Windows / macOS-Linux |
@@ -182,6 +208,14 @@ First full run: **3,387 products** across 3 categories and 114 pages, with no fa
 | `images/` | Dashboard and job screenshots |
 
 ## How to run
+
+### In the cloud (how it runs today)
+
+1. Create a PostgreSQL database (e.g. a free Neon project) and copy its connection string.
+2. In the repository, add a secret named `DATABASE_URL` (*Settings → Secrets and variables → Actions*).
+3. The workflow runs on its own 3 times a day. To run it now, go to *Actions → Colloky scraper → Run workflow*.
+
+### Locally
 
 ```bash
 pip install -r requirements.txt
@@ -203,14 +237,17 @@ Main settings are at the top of the script: categories, headless mode, sleep pre
 ## Roadmap
 
 - [x] Schedule runs automatically (hourly during sales events)
+- [x] Run in the cloud on a schedule (GitHub Actions + Neon, 3x per day)
 - [x] Dashboard on top of the snapshots (Power BI + Databricks)
 - [x] Sell-through estimate from changes in available sizes
 - [x] Medallion lakehouse in Databricks with an orchestrated Job
-- [ ] Automate the CSV export to Databricks (file-arrival trigger)
+- [ ] Automate the export to Databricks (file-arrival trigger)
 - [ ] Add a competitor retailer to benchmark price positioning
+
 ---
 
 *Personal portfolio project. It only collects publicly available catalog information at a low request rate and is not affiliated with Colloky.*
 
 ---
-**Author:** [Constanza Andrea Perez Pulido] · Data Analyst · [[LinkedIn](https://www.linkedin.com/in/constanzaperezpulido/)] · Open to remote roles (US/Canada)
+
+**Author:** Constanza Andrea Perez Pulido · Data Analyst · [LinkedIn](https://www.linkedin.com/in/constanzaperezpulido/) · Open to remote roles (US/Canada)
